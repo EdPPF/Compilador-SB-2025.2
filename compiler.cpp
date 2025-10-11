@@ -1,11 +1,31 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-#include <utility>
+#include <vector>
 #include <string>
 
 using namespace std;
 
+vector<string> split(string &line) {
+    vector<string> args;
+    size_t cur = 0;
+    size_t next = line.find(' ');
+
+    while (next != string::npos) {
+        args.push_back(line.substr(cur, next - cur));
+        cur = next + 1;
+        next = line.find(' ', cur);
+    }
+
+    args.push_back(line.substr(cur));
+    return args;
+}
+
+
+
+
+
+// Pre-Processing
 void removeComment(string &line) {
     size_t cur = line.find(';');
     
@@ -14,561 +34,541 @@ void removeComment(string &line) {
     }
 }
 
-void removeSpaceBefore(string &line) {
-    size_t i = 0;
-    
-    while (i < line.size() && isspace(line[i])) {
-        i++;
-    }
-    
-    line = line.substr(i);
-}
-
-void removeSpaceAfter(string &line) {
+void removeSpace(string &line) {
+    string newString;
     size_t i = line.size();
+    size_t j = 0;
+
+    bool usedSpace = false;
     
     while (i > 0 && isspace(line[i - 1])) {
         i--;
     }
-    
-    line = line.substr(0, i);
-}
 
-void removeSpaceBetween(string &line) {
-    string newString = "";
-    bool usedSpace = false;
+    while (j < i && isspace(line[j])) {
+        j++;
+    }
 
-    for (char x : line) {
+    while (j < i) {
+        char x = line[j];
+
         if (isspace(x)) {
             if (!usedSpace) {
-                newString += ' ';
+                newString += x;
                 usedSpace = true;
             }
         } else {
+            if ((x == ':' || x == ',') && !newString.empty() && newString.back() == ' ') {
+                newString.pop_back();
+            } else if (newString.back() == ':' && !isspace(x)) {
+                newString += ' ';
+            }
+
             newString += x;
             usedSpace = false;
         }
-    }
 
+        j++;
+    }
+    
     line = newString;
 }
 
-void processLines(ifstream &file, fstream &tmp) {
+void processLines(ifstream &file, vector<string> &tmp) {
     string line;
-    string previousLine;
+    string curLine;
+
     bool previousNeedsBody = false;
     
     while (getline(file, line)) {
         removeComment(line);
-        removeSpaceBefore(line);
-        removeSpaceAfter(line);
-        removeSpaceBetween(line);
+        removeSpace(line);
 
         if (!line.empty()) {
-            bool hasLabel = line.find(':') != string::npos;
-            bool needsBody = line.back() == ':';
+            bool needsBody = !line.empty() && line.back() == ':';
+            bool hasLabel = needsBody || line.find(':') != string::npos;
 
             if (previousNeedsBody && !hasLabel) {
-                previousLine += " " + line;
-                line = previousLine;
-            }
+                curLine += " " + line;
+            } else {
+                if (!curLine.empty()) {
+                    tmp.push_back(curLine);
+                }
 
-            if (previousNeedsBody && hasLabel) {
-                tmp << previousLine << endl;
+                curLine = line;
             }
-
-            if (!needsBody) {
-                tmp << line << endl;
-            }
-
-            previousLine = line;
+            
             previousNeedsBody = needsBody;
         }
     }
-}
 
-bool findMacro(string &line, string macro[]) {
-    size_t cur = line.find("MACRO");
-    
-    if (cur != string::npos) {
-        macro[0] = line.substr(0, line.find(':'));
-        return true;
+    if (!curLine.empty()) {
+        tmp.push_back(curLine);
     }
+}
+
+
+
+
+
+// Macros
+void findMacro(string &line, pair<vector<string>, pair<string, string>> &macro, bool &inMacro, int &num) {
+    bool end = line == "ENDMACRO";
     
-    return false;
-}
-
-bool hasMacroStart(const string &line) {
-    return line.find("MACRO") != string::npos;
-}
-
-bool hasMacroEnd(string &line) {
-    return line.find("ENDMACRO") != string::npos;
-}
-
-void addToMacro(string &line, string macro[]) {
-    int i = 0;
-    
-    while (!macro[i].empty()) {
-        i++;
-    }
-    
-    macro[i] = line;
-}
-
-void processMacros(fstream &tmp, string firstMacro[], string secondMacro[]) {
-    string line;
-    bool result = false;
-    bool num = false;
-
-    while (getline(tmp, line)) {
-        if (result) {
-            if (!num) {
-                if (!hasMacroEnd(line)) {
-                    addToMacro(line, firstMacro);
-                } else {
-                    num = 1;
-                    result = false;
-                }
-            } else {
-                if (!hasMacroEnd(line)) {
-                    addToMacro(line, secondMacro);
-                } else {
-                    result = false;
-                }
-            }
+    if (inMacro) {
+        if (end) {
+            inMacro = false;
+            num += 1;
         } else {
-            if (!num) {
-                result = findMacro(line, firstMacro);
-            } else {
-                result = findMacro(line, secondMacro);
-            }
+            macro.first.push_back(line);
         }
-    }
-}
+    } else {
+        size_t cur = line.find("MACRO");
+        
+        if (!end && cur != string::npos) {
+            vector<string> args = split(line);
 
-void extendMacros(fstream &tmp1, fstream &tmp2, string firstMacro[], string secondMacro[]) {
-    string line;
-    
-    while (getline(tmp1, line)) {
-        if (!firstMacro[0].empty() && line.find(firstMacro[0]) != string::npos && line.find("MACRO") == string::npos) {
-            for (int i = 1; i < 32 && !firstMacro[i].empty(); i++) {
-                tmp2 << firstMacro[i] << endl;
+            macro.first.push_back(line.substr(0, cur - 2));
+
+            if (args.size() > 3) {
+                args[2].pop_back();
+                macro.second = make_pair(args[2], args[3]);
+            } else if (args.size() > 2) {  
+                macro.second = make_pair(args[2], NULL);
+            } else {
+                macro.second = make_pair(NULL, NULL);
             }
             
-        } else if (!secondMacro[0].empty() && line.find(secondMacro[0]) != string::npos && line.find("MACRO") == string::npos) {
-            for (int i = 1; i < 32 && !secondMacro[i].empty(); i++) {
-                tmp2 << secondMacro[i] << endl;
+            inMacro = true;
+        }
+    }
+}
+
+void processMacros(vector<string> &tmp, pair<vector<string>, pair<string, string>> &firstMacro, pair<vector<string>, pair<string, string>> &secondMacro) {
+    int num = 0;
+    bool inMacro = false;
+
+    for (auto& line : tmp) {
+        if (num == 0) {
+            findMacro(line, firstMacro, inMacro, num);
+        } else {
+            findMacro(line, secondMacro, inMacro, num);
+        }
+    }
+}
+
+void replaceArgs(vector<string> &newTmp, vector<string> &args, pair<vector<string>, pair<string, string>> &macro) {
+    for (int i = 1; i < macro.first.size(); i++) {
+        string newLine = macro.first[i];
+        string newArg;
+        size_t pos;
+
+        if (args.size() > 1) {
+            if (args[1].back() == ',') {
+                newArg = args[1];
+                newArg.pop_back();
+            } else {
+                newArg = args[1];
             }
             
-        } else {
-            tmp2 << line << endl;
-        }
-    }
-}
-
-void removeMacros(fstream &tmp1, fstream &tmp2) {
-    string line;
-    bool result = true;
-    
-    while (getline(tmp1, line)) {
-        if (result) {
-            if (hasMacroEnd(line)) {
-                result = true;
-            } else if (hasMacroStart(line)) {
-                result = false;
+            pos = newLine.find(" " + macro.second.first + ",");
+            
+            if (pos != string::npos) {
+                newLine.replace(pos + 1, macro.second.first.length(), newArg);
             } else {
-                tmp2 << line << endl;
+                pos = newLine.find(" " + macro.second.first);
+                
+                if (pos != string::npos && pos + macro.second.first.length() + 1 == newLine.length()) {
+                    newLine.replace(pos + 1, macro.second.first.length(), newArg);        
+                }
+            }
+        }
+
+        if (args.size() > 2) {
+            if (args[2].back() == ',') {
+                newArg = args[2];
+                newArg.pop_back();
+            } else {
+                newArg = args[2];
+            }
+            
+            pos = newLine.find(" " + macro.second.second + ",");
+            
+            if (pos != string::npos) {
+                newLine.replace(pos + 1, macro.second.second.length(), newArg);
+            } else {
+                pos = newLine.find(" " + macro.second.second);
+                
+                if (pos != string::npos && pos + macro.second.second.length() + 1 == newLine.length()) {
+                    newLine.replace(pos + 1, macro.second.second.length(), newArg);        
+                }
+            }
+        }
+
+        newTmp.push_back(newLine);
+    }
+}
+
+vector<string> extendMacros(vector<string> &tmp, pair<vector<string>, pair<string, string>> &firstMacro, pair<vector<string>, pair<string, string>> &secondMacro) {
+    vector<string> newTmp;
+
+    bool firstMacroExists = !firstMacro.first.empty();
+    bool secondMacroExists = !secondMacro.first.empty();
+
+    for (int i = 0; i < tmp.size(); i++) {
+        string line = tmp[i];
+        vector<string> args = split(line);
+
+        if (firstMacroExists && (args[0] == firstMacro.first[0] || args[0] == firstMacro.first[0] + ':')) {
+            if (args[1] != ("MACRO")) {
+                replaceArgs(newTmp, args, firstMacro);
+            } else {
+                i += firstMacro.first.size();
+            }
+        } else if (secondMacroExists && (args[0] == secondMacro.first[0] || args[0] == secondMacro.first[0] + ":")) {
+            if (args[1] != ("MACRO")) {
+                replaceArgs(newTmp, args, secondMacro);
+            } else {
+                i += secondMacro.first.size();
             }
         } else {
-            if (hasMacroEnd(line)) {
-                result = true;
-            }
-        }
-    }
-}
-
-int argumentsNum(string &line) {
-    size_t i = 0;
-    int count = 1;
-    
-    for (size_t i = 0; i < line.size(); i++) {
-        if (isspace(line[i])) {
-            count++;
+            newTmp.push_back(line);
         }
     }
     
-    return count;
+    return newTmp;
 }
 
-string getArgument(string &line, int num) {
-    string label = "";
-    
-    for (size_t i = 0; i < line.size() && num >= 0; i++) {
-        if (isspace(line[i])) {
-            num--;
-        } else if (num == 0) {
-            label += line[i];
-        }
-    }   
-    
-    return label;
-}
 
-void printBinary(string &line, fstream &o1, map<string, pair<int, bool>> &labels, int &addr, int binary[], string opCode, int numArgs) {
+
+
+
+// Compilation
+void printBinary(vector<string> &args, fstream &o1, map<string, pair<int, bool>> &labels, vector<int> &binary, int &addr, int opCode) {
     if (addr > 0) {
         o1 << " ";
     }
     
-    if (numArgs == 1) {
+    if (args.size() == 1) {
         o1 << opCode;
-        binary[addr] = 14;
+        binary.push_back(opCode);
         
-    } else if (numArgs == 2) {    
-        string label = getArgument(line, 1);
+    } else if (args.size() == 2) {    
+        int labelAddr;
 
-        if (!labels.count(label)) {
-            labels[label] = make_pair(-1, false);
+        if (!labels.count(args[1])) {
+            labels[args[1]] = make_pair(addr + 1, false);
+            labelAddr = -1;
+        } else {
+            labelAddr = labels[args[1]].first;
         }
         
-        o1 << opCode << " " << labels[label].first;
-        binary[addr] = stoi(opCode);
-        binary[addr + 1] = labels[label].first;
-            
-        if (!labels[label].second) {
-            labels[label] = make_pair(addr + 1, false);
-        }
-    } else if (numArgs == 3) {
-        string label1 = getArgument(line, 1);
-        string label2 = getArgument(line, 2);
+        o1 << opCode << " " << labelAddr;
+        binary.push_back(opCode);
+        binary.push_back(labelAddr);
+
+    } else if (args.size() == 3) {
+        int labelAddr1;
+        int labelAddr2;
         
-        if (!labels.count(label1)) {
-            labels[label1] = make_pair(-1, false);
+        args[1].pop_back();
+
+        if (!labels.count(args[1])) {
+            labels[args[1]] = make_pair(addr + 1, false);
+            labelAddr1 = -1;
+        } else {
+            labelAddr1 = labels[args[1]].first;
         }
-        if (!labels.count(label2)) {
-            labels[label2] = make_pair(-1, false);
+
+        if (!labels.count(args[2])) {
+            labels[args[2]] = make_pair(addr + 2, false);
+            labelAddr2 = -1;
+        } else {
+            labelAddr2 = labels[args[2]].first;
         }
         
-        o1 << opCode << " " << labels[label1].first << " " << labels[label2].first;
-        binary[addr] = stoi(opCode);
-        binary[addr + 1] = labels[label1].first;
-        binary[addr + 2] = labels[label2].first;
-            
-        if (!labels[label1].second) {
-            labels[label1] = make_pair(addr + 1, false);
-        }
-        if (!labels[label2].second) {
-            labels[label2] = make_pair(addr + 2, false);
-        }
+        o1 << opCode << " " << labelAddr1 << " " << labelAddr2;
+        binary.push_back(opCode);
+        binary.push_back(labelAddr1);
+        binary.push_back(labelAddr2);
     }
 }
 
-void printError(fstream &pre, fstream &o1, int &addr, int binary[], string opCode, string cmd) {
-    if (addr > 0) {
-        o1 << " ";
-    }
-    
-    o1 << opCode << " " << "-1";
-    binary[addr] = stoi(opCode);
-    binary[addr + 1] = -1;
-    
+void printError(fstream &pre, string cmd) {
     pre << "\tErro Sintático: Número errado de argumentos para " << cmd << "." << endl;
 }
 
-void printSpace(string &line, fstream &o1, int &addr, int binary[], int numArgs) {
+void printSpace(vector<string> &args, fstream &o1, vector<int> &binary, int &addr) {
     if (addr > 0) {
         o1 << " ";
     }
     
-    if(numArgs == 1) {
-        o1 << "0";
-        binary[addr] = 0;
-        
+    if(args.size() == 1) {
+        o1 << 0;
+        binary.push_back(0);
+
         addr += 1;
-    } else if (numArgs == 2) {
-        string con = getArgument(line, 1);
+    } else if (args.size() == 2) {
+        int con = stoi(args[1]);
 
-        for (int i = 0; i < stoi(con); i++) {
-            o1 << "0";
-            binary[addr + i] = 0;
+        for (int i = 0; i < con; i++) {
+            o1 << 0;
+            binary.push_back(0);
 
-            if (i < stoi(con) - 1) {
+            if (i < con - 1) {
                 o1 << " ";
             }
         }
         
-        addr += stoi(con);
+        addr += con;
     }
 }
 
-void printErrorDirective(fstream &pre, string cmd) {
-    pre << "\tErro Sintático: Número errado de argumentos para " << cmd << "." << endl;
-}
-
-void printConst(string &line, fstream &o1, int &addr, int binary[]) {
+void printConst(vector<string> &args, fstream &o1, vector<int> &binary, int &addr) {
     if (addr > 0) {
         o1 << " ";
     }
     
-    string con = getArgument(line, 1);
+    int con = stoi(args[1]);
 
     o1 << con;
-    binary[addr] = stoi(con);
+    binary.push_back(con);
 }
 
-void getInstructions(string line, fstream &o1, fstream &pre, map<string, pair<int, bool>> &labels, int &addr, int binary[], bool overLabel) {
-    int numArguments = argumentsNum(line);
-    int labelPos = line.find(':');
-    
+void getInstructions(string &line, fstream &o1, fstream &pre, map<string, pair<int, bool>> &labels, vector<int> &binary, int &addr, bool overLabel) {
+    vector<string> args = split(line);
+
     if (!overLabel) {
        pre << line << endl; 
     }
     
-    if (labelPos != string::npos) {
+    if (args[0].back() == ':') {
+
+        args[0].pop_back();
+
         if (overLabel) {
             pre << "\tErro Sintático: Mais de um rótulo na mesma linha." << endl;
+            return;
         }
-        
-        string label = "";
-        
-        for (int i = 0; i < labelPos; i++) {
-            if ((i == 0 && isdigit(line[i])) || (!isalpha(line[i]) && !isdigit(line[i]) && line[i] != '_')) {
-                pre << "\tErro Léxico: Rótulo possui caracteres inválidos." << endl;
-                label = "";
-                break;
-            } else {
-                label += line[i];
+
+        if (isdigit(line[0])) {
+            pre << "\tErro Léxico: Rótulo possui caracteres inválidos." << endl;
+            return;
+        } else {
+            for (int i = 0; i < args[0].length(); i++) {
+                if(!isalnum(line[i]) && line[i] != '_') {
+                    pre << "\tErro Léxico: Rótulo possui caracteres inválidos." << endl;
+                    return;
+                }
             }
         }
     
-        if (labels.count(label)) {
-            if (labels[label].second) {
-                pre << "\tErro Semântico: Rótulo '"  << label << "' já foi definido." << endl;
+        if (labels.count(args[0])) {
+            if (labels[args[0]].second) {
+                pre << "\tErro Semântico: Rótulo '"  << args[0] << "' já foi definido." << endl;
+                return;
             }
             
-            labels[label].second = true;
-            int j = labels[label].first;
+            labels[args[0]].second = true;
             
-            while (j != -1) {
-                int k = binary[j];
-                binary[j] = addr;  
-                j = k;
+            int nextAddr;
+            
+            for (int curAddr = labels[args[0]].first; curAddr != -1; curAddr = nextAddr) {
+                nextAddr = binary[curAddr];
+                binary[curAddr] = addr;  
             }
+        }
+        
+        labels[args[0]] = make_pair(addr, true);
+        
+        line.erase(0, args[0].length() + 1);
+        removeSpace(line);
+        
+        getInstructions(line, o1, pre, labels, binary, addr, true);
 
+    } else if (args[0] == "ADD") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 1);
         } else {
-            labels[label] = make_pair(addr, true);
-        }
-        
-        string newLine = line.substr(labelPos + 1, line.size() - labelPos - 1);
-        removeSpaceBefore(newLine);
-        
-        getInstructions(newLine, o1, pre, labels, addr, binary, true);
-    } else if(line.substr(0, 4) == "ADD " || line.substr(0, 3) == "ADD") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "1", 2);
-        } else {
-            printError(pre, o1, addr, binary, "1", "ADD");
+            printError(pre, "ADD");
         }
         addr += 2;
-    } else if (line.substr(0, 4) == "SUB " || line.substr(0, 3) == "SUB") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "2", 2);
+    } else if (args[0] == "SUB") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 2);
         } else {
-            printError(pre, o1, addr, binary, "2", "SUB");
+            printError(pre, "SUB");
         }
         addr += 2;
-    } else if (line.substr(0, 5) == "MULT " || line.substr(0, 4) == "MULT") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "3", 2);
+    } else if (args[0] == "MULT") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 3);
         } else {
-            printError(pre, o1, addr, binary, "3", "MULT");
+            printError(pre, "MULT");
         }
         addr += 2;
-    } else if (line.substr(0, 4) == "DIV " || line.substr(0, 3) == "DIV") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "4", 2);
+    } else if (args[0] == "DIV") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 4);
         } else {
-            printError(pre, o1, addr, binary, "4", "DIV");
+            printError(pre, "DIV");
         }
         addr += 2;
-    } else if (line.substr(0, 4) == "JMP " || line.substr(0, 3) == "JMP") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "5", 2);
+    } else if (args[0] == "JMP") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 5);
         } else {
-            printError(pre, o1, addr, binary, "5", "JMP");
+            printError(pre, "JMP");
         }
         addr += 2;
-    } else if (line.substr(0, 5) == "JMPN " || line.substr(0, 4) == "JMPN") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "6", 2);
+    } else if (args[0] == "JMPN") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 6);
         } else {
-            printError(pre, o1, addr, binary, "6", "JMPN");
+            printError(pre, "JMPN");
         }
         addr += 2;
-    } else if (line.substr(0, 5) == "JMPP " || line.substr(0, 4) == "JMPP") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "7", 2);
+    } else if (args[0] == "JMPP") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 7);
         } else {
-            printError(pre, o1, addr, binary, "7", "JMPP");
+            printError(pre, "JMPP");
         }
         addr += 2;
-    } else if (line.substr(0, 5) == "JMPZ " || line.substr(0, 4) == "JMPZ") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "8", 2);
+    } else if (args[0] == "JMPZ") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 8);
         } else {
-            printError(pre, o1, addr, binary, "8", "JMPZ");
+            printError(pre, "JMPZ");
         }
         addr += 2;
-    } else if (line.substr(0, 4) == "COPY" || line.substr(0, 4) == "COPY") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "9", 3);
+    } else if (args[0] == "COPY") {
+        if(args.size() == 3) {
+            printBinary(args, o1, labels, binary, addr, 9);
         } else {
-            printError(pre, o1, addr, binary, "9", "COPY");
+            printError(pre, "COPY");
         }
         addr += 3;
-    } else if (line.substr(0, 5) == "LOAD " || line.substr(0, 4) == "LOAD") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "10", 2);
+    } else if (args[0] == "LOAD") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 10);
         } else {
-            printError(pre, o1, addr, binary, "10", "LOAD");
+            printError(pre, "LOAD");
         }
         addr += 2;
-    } else if (line.substr(0, 6) == "STORE " || line.substr(0, 5) == "STORE") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "11", 2);
+    } else if (args[0] == "STORE") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 11);
         } else {
-            printError(pre, o1, addr, binary, "11", "STORE");
+            printError(pre, "STORE");
         }
         addr += 2;
-    } else if (line.substr(0, 6) == "INPUT " || line.substr(0, 5) == "INPUT") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "12", 2);
+    } else if (args[0] == "INPUT") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 12);
         } else {
-            printError(pre, o1, addr, binary, "12", "INPUT");
+            printError(pre, "INPUT");
         }
         addr += 2;
-    } else if (line.substr(0, 7) == "OUTPUT " || line.substr(0, 6) == "OUTPUT") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "13", 2);
+    } else if (args[0] == "OUTPUT") {
+        if(args.size() == 2) {
+            printBinary(args, o1, labels, binary, addr, 13);
         } else {
-            printError(pre, o1, addr, binary, "13", "OUTPUT");
+            printError(pre, "OUTPUT");
         }
         addr += 2;
-    } else if (line.substr(0, 5) == "STOP " || line.substr(0, 4) == "STOP") {
-        if(numArguments == 2) {
-            printBinary(line, o1, labels, addr, binary, "14", 1);
+    } else if (args[0] == "STOP") {
+        if(args.size() == 1) {
+            printBinary(args, o1, labels, binary, addr, 14);
         } else {
-            printError(pre, o1, addr, binary, "14", "STOP");
+            printError(pre, "STOP");
         }
         addr += 1;
-    } else if (line.substr(0, 6) == "SPACE " || line.substr(0, 5) == "SPACE") {
-        if(numArguments == 1) {
-            printSpace(line, o1, addr, binary, 1);
-        } else if (numArguments == 2) {
-            printSpace(line, o1, addr, binary, 2);
+    } else if (args[0] == "SPACE") {
+        if(args.size() == 1) {
+            printSpace(args, o1, binary, addr);
+        } else if (args.size() == 2) {
+            printSpace(args, o1, binary, addr);
         } else {
-            printErrorDirective(pre, "SPACE");
+            printError(pre, "SPACE");
         }
-    } else if (line.substr(0, 6) == "CONST " || line.substr(0, 5) == "CONST") {
-        if(numArguments == 2) {
-            printConst(line, o1, addr, binary);
+    } else if (args[0] == "CONST") {
+        if(args.size() == 2) {
+            printConst(args, o1, binary, addr);
         } else {
-            printErrorDirective(pre, "CONST");
+            printError(pre, "CONST");
         }
         addr += 1;
+    } else {
+        pre << "\tErro Léxico: Instrução Inexistente." << endl;
     }
-    
 }
 
-void compile(fstream &file, fstream &pre, fstream &o1, fstream &o2) {
+void compile(vector<string> &tmp, fstream &pre, fstream &o1, fstream &o2) {
+    vector<int> binary;
     map<string, pair<int, bool>> labels;
-    string line;
 
     int addr = 0;
-    int binary[1024];
     
-    while(getline(file, line)) {
-        getInstructions(line, o1, pre, labels, addr, binary, false);
+    for (string &line : tmp) {
+        getInstructions(line, o1, pre, labels, binary, addr, false);
     }
-    
-    o1.close();
-    
-    for (int bin = addr; bin > 0; bin--) {
-        o2 << binary[addr - bin];
+
+    for (int bin = 0; bin < binary.size(); bin++) {
+        o2 << binary[bin];
         
-        if (bin > 1) {
+        if (bin < binary.size() - 1) {
             o2 << " ";
         }
     }
     
-    o2.close();
-    int count = 0;
+    bool firstMissing = true;
     
-    for (auto label : labels) {
+    for (auto &label : labels) {
         if (!label.second.second) {
-            if (count == 0) {
+            if (firstMissing) {
                 pre << endl;
-                count++;
+                firstMissing = false;
             }
-            pre << "Erro Semântico: Rótulo '" << label.first << "' não foi declarado.";
-            
-            if (count < labels.size() - 1) {
-                pre << endl;
-            }
+
+            pre << "Erro Semântico: Rótulo '" << label.first << "' não foi declarado." << endl;
         }
     }
-    
-    pre.close();
 }
 
+
+
+
+
+// Main
 int main() {
     ifstream file("arquivo.asm");
-    fstream tmp1("tmp1.tmp", ios::in | ios::out | ios::trunc);
-    fstream tmp2("tmp2.tmp", ios::in | ios::out | ios::trunc);
-    fstream tmp3("tmp3.tmp", ios::in | ios::out | ios::trunc);
-    fstream tmp4("tmp4.tmp", ios::in | ios::out | ios::trunc);
     
     fstream pre("arquivo.pre", ios::in | ios::out | ios::trunc);
     fstream o1("arquivo.o1", ios::in | ios::out | ios::trunc);
     fstream o2("arquivo.o2", ios::in | ios::out | ios::trunc);
     
-    if (!file || !tmp1 || !tmp2 || !tmp3 || !tmp4 || !pre || !o1 || !o2) {
+    if (!file || !pre || !o1 || !o2) {
         return 1;
     }
 
-    processLines(file, tmp1);
+    vector<string> tmp;
+    pair<vector<string>, pair<string, string>> firstMacro;
+    pair<vector<string>, pair<string, string>> secondMacro;
+
+    processLines(file, tmp);
 
     file.close();
-    tmp1.clear();
-    tmp1.seekg(0);
+    
+    processMacros(tmp, firstMacro, secondMacro);
+    tmp = extendMacros(tmp, firstMacro, secondMacro);
+    tmp = extendMacros(tmp, firstMacro, secondMacro);
+    
+    compile(tmp, pre, o1, o2);
 
-    string firstMacro[32];
-    string secondMacro[32];
-    
-    processMacros(tmp1, firstMacro, secondMacro);
-
-    tmp1.clear();
-    tmp1.seekg(0);
-    
-    extendMacros(tmp1, tmp2, firstMacro, secondMacro);
-    
-    tmp1.close();
-    tmp2.clear();
-    tmp2.seekg(0);
-    
-    extendMacros(tmp2, tmp3, firstMacro, secondMacro);
-
-    tmp2.close();
-    tmp3.clear();
-    tmp3.seekg(0);
-    
-    removeMacros(tmp3, tmp4);
-
-    tmp3.close();
-    tmp4.clear();
-    tmp4.seekg(0);
-    
-    compile(tmp4, pre, o1, o2);
+    pre.close();
+    o1.close();
+    o2.close();
 
     return 0;
 }
