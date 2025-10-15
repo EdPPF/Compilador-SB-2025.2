@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "Tabelas.h"
 
 // Protótipo das funções principais
 /**
@@ -15,6 +16,8 @@ void executarPreProcessamento(const std::string& arquivo, const std::string& arq
 void executarCompilacao(const std::string& arquivo, const std::string& arqO1, const std::string& arqO2);
 
 int main(int argc, char* argv[]) {
+    inicializarTabelas();
+
     // Argumentos de linha de comando
     if (argc != 2) {
         std::cerr << "Erro: NNumero incorreto de argumentos.\n" << std::endl;
