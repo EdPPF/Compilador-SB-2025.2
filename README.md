@@ -79,3 +79,33 @@ Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semâ
 - Erros léxicos (label não pode começar por número e o único caracter especial que pode ter é o “_”).
 
 A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação).
+
+# Fluxo do Projeto:
+
+O programa opera em três estágios principais, desde o código fonte em assembly até o código objeto final:
+
+- Pré-processamento: O compilador lê o arquivo .asm e processa as definições de macro (MACRO/ENDMACRO).
+As chamadas de macro no código são substituídas pelo código correspondente (com até dois argumentos).
+O resultado é um novo arquivo de texto com a extensão .pre, que contém o código assembly "puro", com todas as macros já expandidas;
+
+- Compilação (Passagem Única): O arquivo .pre é lido uma única vez para ser traduzido.
+Durante esta passagem, o código é convertido para seu formato numérico. Quando um rótulo é utilizado antes de ser definido, ele é adicionado a uma "lista de pendências" interna.
+O programa gera um arquivo de saída intermediário, com extensão .o1, que exibe o código traduzido junto com a lista de pendências, sem as correções;
+
+> Erros: Durante a fase de compilação, o programa analisa o código do arquivo .pre em busca de erros léxicos, sintáticos ou semânticos. Se um erro for encontrado, sua linha e tipo são reportados ao usuário.
+
+- Resolução de Pendências: Após a passagem única, o programa utiliza a tabela de símbolos completa para resolver as pendências, corrigindo os endereços no código objeto gerado.
+O código objeto final é salvo no arquivo com extensão .o2.
+Esta saída final é formatada em uma única linha, com os valores numéricos separados por espaços.
+
+# Rodando Testes:
+
+Compile o programa com um comando como:
+
+`g++ src/compilador.cpp src/Tabelas.cpp src/Parser.cpp -o compilador.exe -std=c++17 -Wall`
+
+- `-Wall`: Habilita todos os warnings do compilador.
+
+Execute o executável criado:
+
+`.\compilador.exe .\tests\teste.asm`

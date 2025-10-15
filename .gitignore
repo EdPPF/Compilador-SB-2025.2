@@ -1,5 +1,7 @@
 # Temporário (ou não)
 *.txt
+# Diretórios ocultos, tipo o .vscode
+*.*/
 
 # Prerequisites
 *.d
