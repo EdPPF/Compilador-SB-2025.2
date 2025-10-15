@@ -1,7 +1,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
 #include "Tabelas.h"
+#include "Parser.h"
 
 // Protótipo das funções principais
 /**
@@ -37,7 +39,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Nomes dos arquivos de saída
-    std::string nomeArquivoPre = baseNomeArquivo + ".pre";
+    // std::string nomeArquivoPre = baseNomeArquivo + ".pre";
+    std::string nomeArquivoPre = nomeArquivoAsm; // Só para os testes aqui
     std::string nomeArquivoO1 = baseNomeArquivo + ".o1";
     std::string nomeArquivoO2 = baseNomeArquivo + ".o2";
 
@@ -67,6 +70,39 @@ void executarPreProcessamento(const std::string& arquivo, const std::string& arq
 
 void executarCompilacao(const std::string& arqPre, const std::string& arqO1, const std::string& arqO2) {
     std::cout << "\nCompilacao..." << std::endl;
-    std::cout << "  (Logica da passagem unica)" << std::endl;
-    std::cout << "  Lendo de '" << arqPre << "' e escrevendo em '" << arqO1 << "' e '" << arqO2 << "'" << std::endl;
+
+    std::ifstream arquivo(arqPre);
+    if (!arquivo.is_open()) {
+        std::cerr << "Erro: Nao foi possivel abrir o arquivo pre-processado '" << arqPre << "'." << std::endl;
+        return;
+    }
+
+    std::string linha;
+    int numLinha = 1;
+    while (std::getline(arquivo, linha)) {
+        LinhaProcessada p = parseLinha(linha);
+
+        // Teste para ver o resultado do parser
+        if (!p.rotulo.empty() || !p.rotulo.empty()) { // Se não estiver vazia
+            std::cout << "Linha " << numLinha << ": ";
+            if (!p.rotulo.empty()) {
+                std::cout << "Rotulo=['" << p.rotulo << "'] ";
+            }
+            if (!p.instrucao.empty()) {
+                std::cout << "Instrucao=['" << p.instrucao << "'] ";
+            }
+            if (!p.operandos.empty()) {
+                std::cout << "Operandos=[";
+                for (size_t i = 0; i < p.operandos.size(); ++i) {
+                    std::cout << "'" << p.operandos[i] << "'";
+                    if (i < p.operandos.size() - 1) {
+                        std::cout << ", ";
+                    }
+                }
+                std::cout << "]";
+            }
+            std::cout << std::endl;
+        }
+        numLinha++;
+    }
 }

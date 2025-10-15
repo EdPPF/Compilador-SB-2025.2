@@ -102,7 +102,7 @@ Esta saída final é formatada em uma única linha, com os valores numéricos se
 
 Compile o programa com um comando como:
 
-`g++ .\src\compilador.cpp .\src\Tabelas.cpp -o compilador.exe -std=c++17 -Wall`
+`g++ src/compilador.cpp src/Tabelas.cpp src/Parser.cpp -o compilador.exe -std=c++17 -Wall`
 
 - `-Wall`: Habilita todos os warnings do compilador.
 
