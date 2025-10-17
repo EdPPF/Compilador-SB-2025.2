@@ -1,22 +1,32 @@
 #include "Parser.h"
+#include "Pre_processor.h"
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <vector>
+#include <string>
 
 LinhaProcessada parseLinha(const std::string& linha) {
     LinhaProcessada resultado; // Inicializa a struct
     std::string linhaLimpa = linha; // Cópia da linha
 
-    // Remove comentários (tudo após ';')
-    size_t posComentario = linhaLimpa.find(';');
-    if (posComentario != std::string::npos) {
-        linhaLimpa = linhaLimpa.substr(0, posComentario);
+    removeSpaceLeft(linhaLimpa);
+
+    // Rótulo é tudo que vem antes de ':', stringstream 'elimina'
+    // espaços no rótulo (charactere inválido)
+    size_t colonPos = linhaLimpa.find(':');
+    if (colonPos != string::npos) {
+        resultado.rotulo = linhaLimpa.substr(0, colonPos);
     }
 
-    // Converte toda a linha para maiúsculas para ser case-insensitive
-    // (mudar essa lógica se acharem necessário)
-    std::transform(linhaLimpa.begin(), linhaLimpa.end(), linhaLimpa.begin(),
-                   [](unsigned char c){ return std::toupper(c); });
+    if (colonPos + 1 > linhaLimpa.size()) {
+        return resultado;
+    }
+
+    linhaLimpa = linhaLimpa.substr(colonPos + 1);
 
     // Usar stringstream para dividir a linha em "tokens" (palavras)
     std::stringstream ss(linhaLimpa);
@@ -34,26 +44,30 @@ LinhaProcessada parseLinha(const std::string& linha) {
     // int tokenIndex = 0;
     size_t tokenIndex = 0;
 
-    // O rótulo é o primeiro token e termina com ':'
-    if (tokens[0].back() == ':') {
-        resultado.rotulo = tokens[0].substr(0, tokens[0].length() - 1);
-        tokenIndex++; // Avança para o próximo token
-    }
-
     // A instrução/diretiva é o próximo token
     if (tokenIndex < tokens.size()) {
-        resultado.instrucao = tokens[tokenIndex];
+        std::string instrucao = tokens[tokenIndex];
+
+        if (instrucao.back() == ',') {
+            instrucao.pop_back();
+        }
+        resultado.instrucao = instrucao;
         tokenIndex++;
     }
 
     // O resto são operandos
     while (tokenIndex < tokens.size()) {
         std::string operando = tokens[tokenIndex];
-        // Remove vírgulas, se houver
-        if (operando.back() == ',') {
-            operando.pop_back();
+        
+        if (operando != "+") {
+            // Remove vírgulas, se houver
+            if (operando.back() == ',') {
+                operando.pop_back();
+            }
+            
+            resultado.operandos.push_back(operando);
         }
-        resultado.operandos.push_back(operando);
+
         tokenIndex++;
     }
 

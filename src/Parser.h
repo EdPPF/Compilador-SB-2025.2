@@ -16,8 +16,8 @@ struct LinhaProcessada {
 /**
  * @brief Processa uma única linha de código ASM.
  * 
- * A função limpa a linha (remove comentários, espaços extras) e a divide em
- * seus componentes lógicos: rótulo, instrução e operandos.
+ * A função divide a linha em seus componentes lógicos:
+ * rótulo, instrução e operandos.
  *
  * @param linha A string contendo a linha de código a ser processada.
  * @return Um objeto LinhaProcessada com os componentes da linha.

@@ -3,14 +3,28 @@
 #include <vector>
 #include <fstream>
 #include "Tabelas.h"
+#include "Pre_processor.h"
 #include "Parser.h"
 
-// Protótipo das funções principais
 /**
- * @brief Função de pré-processamento.
- * Stub para a função de pré-processamento.
+ * @brief Função de pré-processamento, inclundo:
+ *     - Remoção de comentários;
+ *     - Extensão de Macros;
+ *     - Ajuste de rótulos.
+ * @param arquivo Arquivo fonte .arm.
+ * @param arqPre Arquivo pré-processado .pre.
  */
-void executarPreProcessamento(const std::string& arquivo, const std::string& arqPre);
+void executarPreProcessamento(const std::string& arquivo, std::string& arqPre) {
+    std::cout << "\nPre-processamento..." << std::endl;
+    std::cout << "  Lendo de '" << arquivo << "' e escrevendo em '" << arqPre << "'" << std::endl;
+
+    std::vector<std::string> tmp;
+
+    concatLines(arquivo, tmp);
+    extendMacros(arqPre, tmp);
+    //extendMacros(arqPre, tmp);
+}
+
 /**
  * @brief Função de compilação.
  * Stub para a função de compilação.
@@ -31,7 +45,7 @@ int main(int argc, char* argv[]) {
     std::string baseNomeArquivo;
 
     // Remove a extensão do arquivo
-    size_t pos = nomeArquivoAsm.find_first_of('.');
+    size_t pos = nomeArquivoAsm.find_last_of('.');
     if (pos != std::string::npos) { // npos é o valor retornado quando não encontra
         baseNomeArquivo = nomeArquivoAsm.substr(0, pos);
     } else {
@@ -39,8 +53,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Nomes dos arquivos de saída
-    // std::string nomeArquivoPre = baseNomeArquivo + ".pre";
-    std::string nomeArquivoPre = nomeArquivoAsm; // Só para os testes aqui
+    std::string nomeArquivoPre = baseNomeArquivo + ".pre";
     std::string nomeArquivoO1 = baseNomeArquivo + ".o1";
     std::string nomeArquivoO2 = baseNomeArquivo + ".o2";
 
@@ -59,13 +72,6 @@ int main(int argc, char* argv[]) {
     std::cout << "\n+-+- Fim da Compilacao -+-+\n" << std::endl;
 
     return 0;
-}
-
-
-void executarPreProcessamento(const std::string& arquivo, const std::string& arqPre) {
-    std::cout << "\nPre-processamento..." << std::endl;
-    std::cout << "  (Expansao de macros e tudo mais)" << std::endl;
-    std::cout << "  Lendo de '" << arquivo << "' e escrevendo em '" << arqPre << "'" << std::endl;
 }
 
 void executarCompilacao(const std::string& arqPre, const std::string& arqO1, const std::string& arqO2) {
