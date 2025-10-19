@@ -133,8 +133,12 @@ void findMacro(ofstream &file, string &line, LinhaProcessada &newLine, map<strin
     }
 }
 
-void replaceArgs(ofstream &file, string &label, vector<string> &args, map<string, Macro> &macroTable) {
-    Macro macro = macroTable[label];
+void replaceArgs(ofstream &file, LinhaProcessada &line, map<string, Macro> &macroTable) {
+    Macro macro = macroTable[line.instrucao];
+
+    if (!line.rotulo.empty()) {
+        file << line.rotulo + ": ";
+    }
 
     for (string macroLine : macro.body) {
 
@@ -146,13 +150,13 @@ void replaceArgs(ofstream &file, string &label, vector<string> &args, map<string
                 string arg2 = macro.args[j];
 
                 if (arg1 == arg2) {
-                    arg1 = args[j];
+                    arg1 = line.operandos[j];
                 }
             }
         }
 
         if (macroTable.find(newMacroLine.instrucao) != macroTable.end()) {
-            replaceArgs(file, newMacroLine.instrucao, newMacroLine.operandos, macroTable);
+            replaceArgs(file, newMacroLine, macroTable);
             continue;
         }
 
@@ -184,7 +188,7 @@ void extendMacros(string &pre, vector<string> &tmp) {
         LinhaProcessada newLine = parseLinha(line);
 
         if (macroTable.find(newLine.instrucao) != macroTable.end() && curMacro.empty()) {
-            replaceArgs(preArq, newLine.instrucao, newLine.operandos, macroTable);
+            replaceArgs(preArq, newLine, macroTable);
         } else {
             findMacro(preArq, line, newLine, macroTable, curMacro);
         }
