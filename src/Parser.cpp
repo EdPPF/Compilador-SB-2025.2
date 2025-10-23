@@ -1,24 +1,22 @@
 #include "Parser.h"
-#include "Pre_processor.h"
 #include <sstream>
-#include <algorithm>
-#include <cctype>
-#include <iostream>
-#include <fstream>
-#include <map>
-#include <vector>
-#include <string>
 
 LinhaProcessada parseLinha(const std::string& linha) {
     LinhaProcessada resultado; // Inicializa a struct
     std::string linhaLimpa = linha; // Cópia da linha
 
-    removeSpaceLeft(linhaLimpa);
+    size_t i = 0;
+
+    while (i < linhaLimpa.size() && isspace(linhaLimpa[i])) {
+        i++;
+    }
+
+    linhaLimpa = linhaLimpa.substr(i);
 
     // Rótulo é tudo que vem antes de ':', stringstream 'elimina'
     // espaços no rótulo (charactere inválido)
     size_t colonPos = linhaLimpa.find(':');
-    if (colonPos != string::npos) {
+    if (colonPos != std::string::npos) {
         resultado.rotulo = linhaLimpa.substr(0, colonPos);
     }
 
