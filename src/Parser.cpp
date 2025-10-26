@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include <sstream>
+#include <algorithm>
 
 LinhaProcessada parseLinha(const std::string& linha) {
     LinhaProcessada resultado; // Inicializa a struct
@@ -25,6 +26,11 @@ LinhaProcessada parseLinha(const std::string& linha) {
     }
 
     linhaLimpa = linhaLimpa.substr(colonPos + 1);
+
+    // Não foram especificados errors tratando dos delimitadores.
+    // Portanto, assumiremos que eles são utilizados corretamente.
+    replace(linhaLimpa.begin(), linhaLimpa.end(), '+', ' ');
+    replace(linhaLimpa.begin(), linhaLimpa.end(), ',', ' ');
 
     // Usar stringstream para dividir a linha em "tokens" (palavras)
     std::stringstream ss(linhaLimpa);
@@ -57,7 +63,7 @@ LinhaProcessada parseLinha(const std::string& linha) {
     while (tokenIndex < tokens.size()) {
         std::string operando = tokens[tokenIndex];
         
-        if (operando != "+") {
+        if (operando != "+" && operando != ",") {
             // Remove vírgulas, se houver
             if (operando.back() == ',') {
                 operando.pop_back();

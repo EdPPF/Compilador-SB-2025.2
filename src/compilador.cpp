@@ -1,0 +1,211 @@
+#include "Parser.h"
+#include "main.h"
+#include "Tabelas.h"
+#include <algorithm>
+#include <filesystem>
+
+using namespace std;
+
+int addrCount = 0;
+map<string, InfoSimbolo> symbolTable;
+vector<pair<int, int>> memObj;
+
+void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
+    if (addrCount > 0) {
+        o1 << " ";
+    }
+
+    // Diretivas
+    if (cmd.instrucao == "CONST") {
+        o1 << cmd.operandos[0];
+        memObj.push_back(make_pair(stoi(cmd.operandos[0]), 0));
+        addrCount++;
+        return;
+    }
+    if (cmd.instrucao == "SPACE") {
+        if (cmd.operandos.empty()) {
+            o1 << 0;
+            memObj.push_back(make_pair(0, 0));
+
+            addrCount++;
+            return;
+        } else {
+            o1 << 0;
+            memObj.push_back(make_pair(0, 0));
+
+            int count = stoi(cmd.operandos[0]);
+            for (int i = 0; i < count - 1; i++) {
+                o1 << " " << 0;
+                memObj.push_back(make_pair(0, 0));
+            }
+
+            addrCount += count;
+            return;
+        }
+    }
+
+    // Instruções
+    o1 << info.opcode;
+    memObj.push_back(make_pair(info.opcode, 0));
+
+    addrCount++;
+
+    if (cmd.instrucao == "COPY" || cmd.operandos.size() == 1) {
+        for (int i = 0; i < cmd.operandos.size(); i++){ 
+            string op = cmd.operandos[i];
+
+            if (symbolTable.find(op) == symbolTable.end()) {
+                symbolTable[op] = {-1, false};
+            }
+
+            memObj.push_back(make_pair(symbolTable[op].endereco, 0));
+            o1 << " " << symbolTable[op].endereco;
+
+            if (!symbolTable[op].definido) {
+                symbolTable[op] = {addrCount, false};  
+            }
+
+            addrCount++;
+        }
+    } else if (cmd.instrucao == "STORE" || cmd.instrucao == "LOAD" || cmd.instrucao == "INPUT" || cmd.instrucao == "OUTPUT") {
+        string op1 = cmd.operandos[0];
+        string op2 = cmd.operandos[1];
+
+        if (symbolTable.find(op1) == symbolTable.end()) {
+            symbolTable[op1] = {-1, false};
+        }
+
+        memObj.push_back(make_pair(symbolTable[op1].endereco, stoi(op2)));
+        o1 << " " << symbolTable[op1].endereco;
+
+        if (!symbolTable[op1].definido) {
+            symbolTable[op1] = {addrCount, false};  
+        }
+
+        addrCount++;
+    }
+}
+
+void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
+    int i = lineCount;
+
+    for(int i = lineCount; i < memFile.size(); i++) {
+        pre << memFile[i] << endl;
+    }
+
+    if (errorID == 0) {
+        pre << endl << "Erro Semântico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' declarado duas vezes em lugares diferentes.";    
+    } else if (errorID == 1) {
+        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Dois rótulos na mesma linha.";    
+    } else if (errorID == 2) {
+        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' com número de parâmetros errado.";    
+    } else if (errorID == 3) {
+        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' inexistente.";    
+    } else if (errorID == 4) {
+        pre << endl << "Erro Léxico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' com caracteres inválidos.";    
+    }
+
+    arq.close();
+    pre.close();
+    o1.close();
+    o2.close();
+
+    filesystem::remove(nomeArquivoO1);
+    filesystem::remove(nomeArquivoO2);
+}
+
+int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
+    if (cmd.instrucao.back() == ':') {
+        callError(cmd, lineCount, 1);
+        return 1;
+    }
+    if (tabelaInstrucoes.find(cmd.instrucao) == tabelaInstrucoes.end()) {
+        callError(cmd, lineCount, 3);
+        return 1;
+    }
+
+    InfoInstrucao info = tabelaInstrucoes[cmd.instrucao];
+    if (find(info.operandos.begin(), info.operandos.end(), cmd.operandos.size()) == info.operandos.end()) {
+        callError(cmd, lineCount, 2);
+        return 1;
+    }
+
+    for (string op : cmd.operandos) {
+        if (op.back() == ':') {
+            callError(cmd, lineCount, 1);
+            return 1;
+        }
+    }
+
+    pre << line << endl;
+    writeObject(cmd, info);
+
+    return 0;
+}
+
+int writeO2() {
+    for (const auto& entry : symbolTable) {
+        if (!entry.second.definido) {
+            pre << endl << "Erro Semântico: Rótulo '" << entry.first << "' não declarado.";
+
+            arq.close();
+            pre.close();
+            o1.close();
+            o2.close();
+
+            filesystem::remove(nomeArquivoO1);
+            filesystem::remove(nomeArquivoO2);
+
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < memObj.size(); i++) {
+        int bin = memObj[i].first;
+        if (i > 0) {
+            o2 << " ";
+        }
+        o2 << bin;
+    }
+
+    return 0;
+}
+
+int compile() {
+    int lineCount = 0;
+
+    for (int lineCount = 0; lineCount < memFile.size(); lineCount++) {
+        string line = memFile[lineCount];
+        LinhaProcessada cmd = parseLinha(line);
+        
+        if (!cmd.rotulo.empty()) {
+            if (isdigit(cmd.rotulo[0]) || any_of(cmd.rotulo.begin(), cmd.rotulo.end(), [](auto x) {return !isalnum(x) && x != '_';})) {
+                callError(cmd, lineCount, 4);
+                return 1;
+            }
+
+            if (symbolTable.find(cmd.rotulo) != symbolTable.end()) {
+                if (symbolTable[cmd.rotulo].definido) {
+                    callError(cmd, lineCount, 0);
+                    return 1;
+                } else {
+                    int tmp;
+                    for (int i = symbolTable[cmd.rotulo].endereco; i > 0; i = tmp) {
+                        tmp = memObj[i].first;
+                        memObj[i].first = addrCount + memObj[i].second;
+                    }
+                }
+            } 
+
+            symbolTable[cmd.rotulo] = {addrCount, true};
+        }
+
+        if (cmd.instrucao.empty()) {
+            pre << line << endl;
+        } else if (decodeInstruction(cmd, line, lineCount)) {
+            return 1;
+        }
+    }
+
+    return writeO2();
+}

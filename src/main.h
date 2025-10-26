@@ -8,11 +8,13 @@
 using namespace std;
 
 extern ifstream arq;
-extern ofstream tmp;
 extern ofstream pre;
 extern ofstream o1;
 extern ofstream o2;
 
-extern vector<LinhaProcessada> memFile;
+extern string nomeArquivoO1;
+extern string nomeArquivoO2;
+
+extern vector<string> memFile;
 
 #endif // PARSER_H

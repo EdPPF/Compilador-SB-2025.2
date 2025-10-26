@@ -3,14 +3,17 @@
 #include "Pre_Processador.h"
 #include "Parser.h"
 #include "Tabelas.h"
+#include "Compilador.h"
 
 ifstream arq;
-ofstream tmp;
 ofstream pre;
 ofstream o1;
 ofstream o2;
 
-vector<LinhaProcessada> memFile;
+string nomeArquivoO1;
+string nomeArquivoO2;
+
+vector<string> memFile;
 
 /**
  * @brief Função de pré-processamento, inclundo:
@@ -30,7 +33,11 @@ void executarPreProcessamento() {
  * @brief Função de compilação.
  * Stub para a função de compilação.
  */
-void executarCompilacao(const std::string& arquivo, const std::string& arqO1, const std::string& arqO2);
+int executarCompilacao() {
+    std::cout << "\nCompilacao..." << std::endl;
+
+    return compile();
+}
 
 int main(int argc, char* argv[]) {
     inicializarTabelas();
@@ -54,18 +61,16 @@ int main(int argc, char* argv[]) {
     }
 
     // Nomes dos arquivos de saída
-    std::string nomeArquivoTmp = baseNomeArquivo + ".tmp";
     std::string nomeArquivoPre = baseNomeArquivo + ".pre";
-    std::string nomeArquivoO1 = baseNomeArquivo + ".o1";
-    std::string nomeArquivoO2 = baseNomeArquivo + ".o2";
+    nomeArquivoO1 = baseNomeArquivo + ".o1";
+    nomeArquivoO2 = baseNomeArquivo + ".o2";
 
     arq.open(nomeArquivoAsm);
-    tmp.open(nomeArquivoTmp);
     pre.open(nomeArquivoPre);
     o1.open(nomeArquivoO1);
     o2.open(nomeArquivoO2);
 
-    if (!arq.is_open() || !tmp.is_open() || !pre.is_open() || !o1.is_open() || !o2.is_open()) {
+    if (!arq.is_open() || !pre.is_open() || !o1.is_open() || !o2.is_open()) {
         std::cerr << "Erro: Nao foi possivel abrir os arquivos necessarios para compilacao" << std::endl;
         return 1;
     } 
@@ -82,48 +87,18 @@ int main(int argc, char* argv[]) {
     // 1. Pré-processamento
     executarPreProcessamento();
     // 2. Compilação
-    // executarCompilacao(nomeArquivoPre, nomeArquivoO1, nomeArquivoO2);
+    if(!executarCompilacao()) {
+        arq.close();
+        pre.close();
+        o1.close();
+        o2.close();
 
-    std::cout << "\n+-+- Fim da Compilacao -+-+\n" << std::endl;
+        std::cout << "\n+-+- Fim da Compilacao -+-+\n" << std::endl;
+    } else {
+        std::cout << "\n+-+- Compilacao interrompida devido a um erro -+-+\n" << std::endl;
+    }
+
+    
 
     return 0;
-}
-
-void executarCompilacao(const std::string& arqPre, const std::string& arqO1, const std::string& arqO2) {
-    std::cout << "\nCompilacao..." << std::endl;
-
-    std::ifstream arquivo(arqPre);
-    if (!arquivo.is_open()) {
-        std::cerr << "Erro: Nao foi possivel abrir o arquivo pre-processado '" << arqPre << "'." << std::endl;
-        return;
-    }
-
-    std::string linha;
-    int numLinha = 1;
-    while (std::getline(arquivo, linha)) {
-        LinhaProcessada p = parseLinha(linha);
-
-        // Teste para ver o resultado do parser
-        if (!p.rotulo.empty() || !p.rotulo.empty()) { // Se não estiver vazia
-            std::cout << "Linha " << numLinha << ": ";
-            if (!p.rotulo.empty()) {
-                std::cout << "Rotulo=['" << p.rotulo << "'] ";
-            }
-            if (!p.instrucao.empty()) {
-                std::cout << "Instrucao=['" << p.instrucao << "'] ";
-            }
-            if (!p.operandos.empty()) {
-                std::cout << "Operandos=[";
-                for (size_t i = 0; i < p.operandos.size(); ++i) {
-                    std::cout << "'" << p.operandos[i] << "'";
-                    if (i < p.operandos.size() - 1) {
-                        std::cout << ", ";
-                    }
-                }
-                std::cout << "]";
-            }
-            std::cout << std::endl;
-        }
-        numLinha++;
-    }
 }

@@ -10,7 +10,7 @@ using namespace std;
  */
 struct Macro {
     vector<string> args;
-    vector<LinhaProcessada> body;
+    vector<string> body;
 };
 
 /** 

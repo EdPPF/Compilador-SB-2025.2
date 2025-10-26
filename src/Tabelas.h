@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 // TABELA DE INSTRUÇÕES (TI)
 /**
@@ -11,7 +12,7 @@
 struct InfoInstrucao {
     int opcode;
     int tamanho; // Tamanho da palavra em memória
-    int operandos;
+    std::vector<int> operandos;
 };
 
 // definida em Tabelas.cpp
