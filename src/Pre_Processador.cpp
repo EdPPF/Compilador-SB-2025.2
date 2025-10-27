@@ -39,7 +39,8 @@ void findMacro(LinhaProcessada &parsedLine, string &line) {
 void replaceArgs(LinhaProcessada &parsedLine) {
     Macro macro = macroTable.table[parsedLine.instrucao];
     
-    for (string macroLine : macro.body) {
+    for (int count = 0; count < macro.body.size(); count++) {
+        string macroLine = macro.body[count];
 
         LinhaProcessada processedMacro = parseLinha(macroLine);
 
@@ -51,19 +52,19 @@ void replaceArgs(LinhaProcessada &parsedLine) {
                 if (arg1 == arg2) {
                     size_t pos = macroLine.find(" " + arg1 + " ");
                     if (pos != string::npos) {
-                        macroLine.replace(pos, arg1.length() + 2, parsedLine.operandos[j]);
+                        macroLine.replace(pos, arg1.length() + 2, " " + parsedLine.operandos[j] + " ");
                     }
                     pos = macroLine.find(" " + arg1);
                     if (pos != string::npos && pos == macroLine.length() - arg1.length() - 1) {
-                        macroLine.replace(pos, arg1.length() + 1, parsedLine.operandos[j]);
+                        macroLine.replace(pos, arg1.length() + 1, " " + parsedLine.operandos[j]);
                     }
                     pos = macroLine.find(" " + arg1 + ",");
                     if (pos != string::npos) {
-                        macroLine.replace(pos, arg1.length() + 2, parsedLine.operandos[j]);
+                        macroLine.replace(pos, arg1.length() + 2, " " + parsedLine.operandos[j] + ",");
                     }
                     pos = macroLine.find(" " + arg1 + "+");
                     if (pos != string::npos) {
-                        macroLine.replace(pos, arg1.length() + 2, parsedLine.operandos[j]);
+                        macroLine.replace(pos, arg1.length() + 2, " " + parsedLine.operandos[j] + "+");
                     }
                 }
             }
@@ -74,6 +75,10 @@ void replaceArgs(LinhaProcessada &parsedLine) {
         if (macroTable.table.find(processedMacro.instrucao) != macroTable.table.end()) {
             replaceArgs(processedMacro);
             continue;
+        }
+
+        if (!parsedLine.rotulo.empty() && count == 0) {
+            macroLine = parsedLine.rotulo + ": " + macroLine;
         }
 
         memFile.push_back(macroLine);

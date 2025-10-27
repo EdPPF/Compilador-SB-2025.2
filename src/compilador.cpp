@@ -75,11 +75,13 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
             symbolTable[op1] = {-1, false};
         }
 
-        memObj.push_back(make_pair(symbolTable[op1].endereco, stoi(op2)));
-        o1 << " " << symbolTable[op1].endereco;
-
         if (!symbolTable[op1].definido) {
+            memObj.push_back(make_pair(symbolTable[op1].endereco, stoi(op2)));
+            o1 << " " << symbolTable[op1].endereco;
             symbolTable[op1] = {addrCount, false};  
+        } else {
+            memObj.push_back(make_pair(symbolTable[op1].endereco + stoi(op2), 0));
+            o1 << " " << symbolTable[op1].endereco + stoi(op2);
         }
 
         addrCount++;
