@@ -54,7 +54,7 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
     addrCount++;
 
     if (cmd.instrucao == "COPY" || cmd.operandos.size() == 1) {
-        for (int i = 0; i < cmd.operandos.size(); i++){ 
+        for (size_t i = 0; i < cmd.operandos.size(); i++){ 
             string op = cmd.operandos[i];
 
             if (symbolTable.find(op) == symbolTable.end()) {
@@ -95,11 +95,7 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
  * @brief Reporta um erro de compilação, grava a mensagem no arquivo .pre e sinaliza que um erro ocorreu.
  */
 void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
-    int i = lineCount;
-
-    for(int i = lineCount; i < memFile.size(); i++) {
-        pre << memFile[i] << endl;
-    }
+    houveErroDeCompilacao = true; // Seta a flag de erro
 
     if (errorID == 0) {
         pre << endl << "Erro Semântico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' declarado duas vezes em lugares diferentes.";    
@@ -112,14 +108,6 @@ void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
     } else if (errorID == 4) {
         pre << endl << "Erro Léxico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' com caracteres inválidos.";    
     }
-
-    arq.close();
-    pre.close();
-    o1.close();
-    o2.close();
-
-    filesystem::remove(nomeArquivoO1);
-    filesystem::remove(nomeArquivoO2);
 }
 
 /**
@@ -128,7 +116,7 @@ void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
 int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
     if (cmd.instrucao.back() == ':') {
         callError(cmd, lineCount, 1);
-        return 1;
+        return 1; // Sinaliza erro, compile vai continuar para a próxima linha
     }
     if (tabelaInstrucoes.find(cmd.instrucao) == tabelaInstrucoes.end()) {
         callError(cmd, lineCount, 3);
@@ -150,7 +138,6 @@ int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
 
     pre << line << endl;
     writeObject(cmd, info);
-
     return 0;
 }
 
@@ -161,20 +148,16 @@ int writeO2() {
     for (const auto& entry : symbolTable) {
         if (!entry.second.definido) {
             pre << endl << "Erro Semântico: Rótulo '" << entry.first << "' não declarado.";
-
-            arq.close();
-            pre.close();
-            o1.close();
-            o2.close();
-
-            filesystem::remove(nomeArquivoO1);
-            filesystem::remove(nomeArquivoO2);
-
-            return 1;
+            houveErroDeCompilacao = true; // Seta a flag de erro
         }
     }
 
-    for (int i = 0; i < memObj.size(); i++) {
+    if (houveErroDeCompilacao) {
+        return 1; // Indica que houve erro na compilação
+    }
+
+    // Escreve o arquivo .o2
+    for (size_t i = 0; i < memObj.size(); i++) {
         int bin = memObj[i].first;
         if (i > 0) {
             o2 << " ";
@@ -191,20 +174,20 @@ int writeO2() {
 int compile() {
     int lineCount = 0;
 
-    for (int lineCount = 0; lineCount < memFile.size(); lineCount++) {
+    for (lineCount; lineCount < memFile.size(); lineCount++) {
         string line = memFile[lineCount];
         LinhaProcessada cmd = parseLinha(line);
         
         if (!cmd.rotulo.empty()) {
             if (isdigit(cmd.rotulo[0]) || any_of(cmd.rotulo.begin(), cmd.rotulo.end(), [](auto x) {return !isalnum(x) && x != '_';})) {
                 callError(cmd, lineCount, 4);
-                return 1;
+                continue;
             }
 
             if (symbolTable.find(cmd.rotulo) != symbolTable.end()) {
                 if (symbolTable[cmd.rotulo].definido) {
                     callError(cmd, lineCount, 0);
-                    return 1;
+                    continue;
                 } else {
                     int tmp;
                     for (int i = symbolTable[cmd.rotulo].endereco; i > 0; i = tmp) {
@@ -220,7 +203,7 @@ int compile() {
         if (cmd.instrucao.empty()) {
             pre << line << endl;
         } else if (decodeInstruction(cmd, line, lineCount)) {
-            return 1;
+            continue;
         }
     }
 

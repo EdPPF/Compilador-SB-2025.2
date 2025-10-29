@@ -17,4 +17,6 @@ extern string nomeArquivoO2;
 
 extern vector<string> memFile;
 
+extern bool houveErroDeCompilacao;
+
 #endif // PARSER_H

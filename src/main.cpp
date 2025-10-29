@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include "main.h"
 #include "Pre_Processador.h"
 #include "Parser.h"
@@ -14,6 +15,8 @@ string nomeArquivoO1;
 string nomeArquivoO2;
 
 vector<string> memFile;
+
+bool houveErroDeCompilacao = false;
 
 /**
  * @brief Função de pré-processamento, inclundo:
@@ -88,16 +91,20 @@ int main(int argc, char* argv[]) {
     // Chama as funções principais
     // 1. Pré-processamento
     executarPreProcessamento();
-    // 2. Compilação
-    if(!executarCompilacao()) {
-        arq.close();
-        pre.close();
-        o1.close();
-        o2.close();
+    
+    // Fecha os arquivos em todos os casos
+    int statusCompilacao = executarCompilacao();
+    arq.close();
+    pre.close();
+    o1.close();
+    o2.close();
 
-        std::cout << "\n+-+- Fim da Compilacao -+-+\n" << std::endl;
+    if(statusCompilacao != 0 || houveErroDeCompilacao) {
+        std::cout << "\n+-+- Compilacao finalizada com erros -+-+\n" << std::endl;
+        filesystem::remove(nomeArquivoO1);
+        filesystem::remove(nomeArquivoO2);
     } else {
-        std::cout << "\n+-+- Compilacao interrompida devido a um erro -+-+\n" << std::endl;
+        std::cout << "\n+-+- Fim da Compilacao -+-+\n" << std::endl;
     }
 
     return 0;

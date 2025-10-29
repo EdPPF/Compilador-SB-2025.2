@@ -46,14 +46,14 @@ void findMacro(LinhaProcessada &parsedLine, string &line) {
 void replaceArgs(LinhaProcessada &parsedLine) {
     Macro macro = macroTable.table[parsedLine.instrucao];
     
-    for (int count = 0; count < macro.body.size(); count++) {
+    for (size_t count = 0; count < macro.body.size(); count++) {
         string macroLine = macro.body[count];
 
         LinhaProcessada processedMacro = parseLinha(macroLine);
 
-        for (int i = 0; i < processedMacro.operandos.size(); i++) {
+        for (size_t i = 0; i < processedMacro.operandos.size(); i++) {
             string &arg1 = processedMacro.operandos[i];
-            for (int j = 0; j < macro.args.size(); j++) {
+            for (size_t j = 0; j < macro.args.size(); j++) {
                 string arg2 = macro.args[j];
 
                 if (arg1 == arg2) {
@@ -113,7 +113,7 @@ void processLines() {
     string line; 
     string previousLine;
 
-    bool previousNeedsBody = false;
+    // bool previousNeedsBody = false;
     
     while (getline(arq, line)) {
         removeComment(line);
