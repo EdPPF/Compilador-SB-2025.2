@@ -10,6 +10,9 @@ int addrCount = 0;
 map<string, InfoSimbolo> symbolTable;
 vector<pair<int, int>> memObj;
 
+/**
+ * @brief Escreve o código objeto não resolvido (com pendências) no arquivo .o1 e armazena no vetor memObj.
+ */
 void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
     if (addrCount > 0) {
         o1 << " ";
@@ -88,6 +91,9 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
     }
 }
 
+/**
+ * @brief Reporta um erro de compilação, grava a mensagem no arquivo .pre e sinaliza que um erro ocorreu.
+ */
 void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
     int i = lineCount;
 
@@ -116,6 +122,9 @@ void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
     filesystem::remove(nomeArquivoO2);
 }
 
+/**
+ * @brief Valida uma instrução, seus operandos, e chama writeObject para gerar o código.
+ */
 int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
     if (cmd.instrucao.back() == ':') {
         callError(cmd, lineCount, 1);
@@ -145,6 +154,9 @@ int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
     return 0;
 }
 
+/**
+ * @brief Verifica erros semânticos (rótulos pendentes) e escreve o código objeto final resolvido no arquivo .o2.
+ */
 int writeO2() {
     for (const auto& entry : symbolTable) {
         if (!entry.second.definido) {
@@ -173,6 +185,9 @@ int writeO2() {
     return 0;
 }
 
+/**
+ * @brief Executa o algoritmo de compilação de passagem única, populando a Tabela de Símbolos e resolvendo pendências.
+ */
 int compile() {
     int lineCount = 0;
 

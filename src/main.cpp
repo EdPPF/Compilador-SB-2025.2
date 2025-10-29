@@ -20,8 +20,6 @@ vector<string> memFile;
  *     Remoção de comentários,
  *     Extensão de Macros,
  *     Ajuste de rótulos.
- * @param 
- * @return
  */
 void executarPreProcessamento() {
     std::cout << "\nPre-processamento..." << std::endl;
@@ -31,7 +29,6 @@ void executarPreProcessamento() {
 
 /**
  * @brief Função de compilação.
- * Stub para a função de compilação.
  */
 int executarCompilacao() {
     std::cout << "\nCompilacao..." << std::endl;
@@ -39,6 +36,11 @@ int executarCompilacao() {
     return compile();
 }
 
+/**
+ * @brief Ponto de entrada principal.
+ * 
+ * Gerencia argumentos, arquivos e orquestra as fases de pré-processamento e compilação.
+ */
 int main(int argc, char* argv[]) {
     inicializarTabelas();
 
@@ -97,8 +99,6 @@ int main(int argc, char* argv[]) {
     } else {
         std::cout << "\n+-+- Compilacao interrompida devido a um erro -+-+\n" << std::endl;
     }
-
-    
 
     return 0;
 }

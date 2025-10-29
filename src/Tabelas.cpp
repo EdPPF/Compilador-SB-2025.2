@@ -2,6 +2,9 @@
 
 std::map<std::string, InfoInstrucao> tabelaInstrucoes;
 
+/**
+ * @brief Preenche a tabela global de instruções (tabelaInstrucoes) com os opcodes, tamanhos e operandos do assembly.
+ */
 void inicializarTabelas() {
     // Formato 1: Opcode (0 operandos)
     tabelaInstrucoes["STOP"]   = {14, 1, {0}}; 

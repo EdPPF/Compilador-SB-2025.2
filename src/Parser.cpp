@@ -2,6 +2,9 @@
 #include <sstream>
 #include <algorithm>
 
+/**
+ * @brief Analisa uma string de código assembly, limpando-a e dividindo-a nos componentes: rótulo, instrução e operandos.
+ */
 LinhaProcessada parseLinha(const std::string& linha) {
     LinhaProcessada resultado; // Inicializa a struct
     std::string linhaLimpa = linha; // Cópia da linha

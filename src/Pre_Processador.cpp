@@ -7,7 +7,9 @@ using namespace std;
 
 MacroTable macroTable;
 
-// Tratamento de linhas
+/**
+ * @brief Remove comentários (tudo após ';') de uma linha de código.
+ */
 void removeComment(string &line) {
     size_t cur = line.find(';');
     
@@ -16,7 +18,9 @@ void removeComment(string &line) {
     }
 }
 
-// Expansão de Macros
+/**
+ * @brief Processa uma linha para identificar o início ou corpo de uma definição de macro.
+ */
 void findMacro(LinhaProcessada &parsedLine, string &line) {
     if (!macroTable.currentMacro.empty()) {
         if (parsedLine.instrucao == "ENDMACRO") {
@@ -36,6 +40,9 @@ void findMacro(LinhaProcessada &parsedLine, string &line) {
     }
 }
 
+/**
+ * @brief Substitui os argumentos de uma macro pelos argumentos reais fornecidos na chamada.
+ */
 void replaceArgs(LinhaProcessada &parsedLine) {
     Macro macro = macroTable.table[parsedLine.instrucao];
     
@@ -85,6 +92,9 @@ void replaceArgs(LinhaProcessada &parsedLine) {
     }
 }
 
+/**
+ * @brief Ponto de entrada para expansão de macros; decide se uma linha é uma chamada de macro ou uma definição.
+ */
 void extendMacros(string &line) {
     LinhaProcessada parsedLine = parseLinha(line);
 
@@ -96,7 +106,9 @@ void extendMacros(string &line) {
     
 }
 
-// Processamento Principal
+/**
+ * @brief Lê o arquivo .asm linha a linha, removendo comentários e expandindo macros.
+ */
 void processLines() {
     string line; 
     string previousLine;
