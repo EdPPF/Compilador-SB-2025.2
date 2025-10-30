@@ -9,6 +9,10 @@
 *.lo
 *.o
 *.obj
+# Especificos do projeto
+*.o1
+*.o2
+*.pre
 
 # Precompiled Headers
 *.gch

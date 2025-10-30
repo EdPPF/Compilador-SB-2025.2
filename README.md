@@ -79,3 +79,30 @@ Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semâ
 - Erros léxicos (label não pode começar por número e o único caracter especial que pode ter é o “_”).
 
 A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação).
+
+# Compilando e Rodando Testes
+
+Para compilar o projeto em um executável, rode
+
+```bash
+g++ main.cpp Pre_Processador.cpp compilador.cpp Parser.cpp Tabelas.cpp -o compilador -std=c++17 -Wall
+```
+
+## Configurando Make no Windows
+
+O projeto conta com um Makefile para facilitar a compilação.
+
+No Windows, para ter acesso ao comando `make`, primeiro instale o [scoop](scoop.sh) (siga as instruções do site).
+Depois, instale [o app make](https://scoop.sh/#/apps?q=make&id=c43ff861c0f1713336e5304d85334a29ffb86317) a partir do comando `scoop install main/make`.
+
+Com isso, o comando ficará disponível, então basta rodar `make` a partir da raiz do projeto para compilar os arquivos em um executável.
+
+## Executando Testes
+
+Para executar os testes, rode
+
+```bash
+./compilador.exe tests/<nome_do_arquivo_de_teste>.asm
+```
+
+Onde `<nome_do_arquivo_de_teste>` é o nome de um dos arquivos da pasta teste.
