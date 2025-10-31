@@ -98,15 +98,15 @@ void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
     houveErroDeCompilacao = true; // Seta a flag de erro
 
     if (errorID == 0) {
-        pre << endl << "Erro Semântico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' declarado duas vezes em lugares diferentes.";    
+        pre << "\t" << "Erro Semântico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' declarado duas vezes em lugares diferentes.\n";    
     } else if (errorID == 1) {
-        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Dois rótulos na mesma linha.";    
+        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Dois rótulos na mesma linha.\n";    
     } else if (errorID == 2) {
-        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' com número de parâmetros errado.";    
+        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' com número de parâmetros errado.\n";    
     } else if (errorID == 3) {
-        pre << endl << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' inexistente.";    
+        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' inexistente.\n";    
     } else if (errorID == 4) {
-        pre << endl << "Erro Léxico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' com caracteres inválidos.";    
+        pre << "\t" << "Erro Léxico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' com caracteres inválidos.\n";    
     }
 }
 
@@ -114,10 +114,17 @@ void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
  * @brief Valida uma instrução, seus operandos, e chama writeObject para gerar o código.
  */
 int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
-    if (cmd.instrucao.back() == ':') {
+    if (cmd.instrucao.find(':') != string::npos) {
         callError(cmd, lineCount, 1);
         return 1; // Sinaliza erro, compile vai continuar para a próxima linha
     }
+    for (string op : cmd.operandos) {
+        if (op.find(':') != string::npos) {
+            callError(cmd, lineCount, 1);
+            return 1;
+        }
+    }
+
     if (tabelaInstrucoes.find(cmd.instrucao) == tabelaInstrucoes.end()) {
         callError(cmd, lineCount, 3);
         return 1;
@@ -129,14 +136,6 @@ int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
         return 1;
     }
 
-    for (string op : cmd.operandos) {
-        if (op.back() == ':') {
-            callError(cmd, lineCount, 1);
-            return 1;
-        }
-    }
-
-    pre << line << endl;
     writeObject(cmd, info);
     return 0;
 }
@@ -177,6 +176,8 @@ int compile() {
     for (lineCount; lineCount < memFile.size(); lineCount++) {
         string line = memFile[lineCount];
         LinhaProcessada cmd = parseLinha(line);
+
+        pre << line << endl;
         
         if (!cmd.rotulo.empty()) {
             if (isdigit(cmd.rotulo[0]) || any_of(cmd.rotulo.begin(), cmd.rotulo.end(), [](auto x) {return !isalnum(x) && x != '_';})) {

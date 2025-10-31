@@ -53,28 +53,13 @@ LinhaProcessada parseLinha(const std::string& linha) {
 
     // A instrução/diretiva é o próximo token
     if (tokenIndex < tokens.size()) {
-        std::string instrucao = tokens[tokenIndex];
-
-        if (instrucao.back() == ',') {
-            instrucao.pop_back();
-        }
-        resultado.instrucao = instrucao;
+        resultado.instrucao = tokens[tokenIndex];
         tokenIndex++;
     }
 
     // O resto são operandos
     while (tokenIndex < tokens.size()) {
-        std::string operando = tokens[tokenIndex];
-        
-        if (operando != "+" && operando != ",") {
-            // Remove vírgulas, se houver
-            if (operando.back() == ',') {
-                operando.pop_back();
-            }
-            
-            resultado.operandos.push_back(operando);
-        }
-
+        resultado.operandos.push_back(tokens[tokenIndex]);
         tokenIndex++;
     }
 

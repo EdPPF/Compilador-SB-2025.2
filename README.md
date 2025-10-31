@@ -1,13 +1,13 @@
-# Trab 1: Compilador (+Pré-Processador)
+# Trab 1: Compilador (+Pré-Processador) - Eduardo Ferreira e Victor Fontes Cavalcante
 
 ## Instalando ferramentas para desenvolvimento C++
 
-Apenas siga o [tutorial da Microsoft](https://code.visualstudio.com/docs/cpp/config-mingw). Se estiver usando algo diferente do VSCode, é necessário procurar outro turorial.
+Apenas siga o [tutorial da Microsoft](https://code.visualstudio.com/docs/cpp/config-mingw). Se estiver usando algo diferente do VSCode, é necessário procurar outro tutorial.
 
 ## Especificação
 
 Deve ser entregue o código fonte em C ou C++ sem uso de biblioteca externa, porém sem restrição a nenhum padrão especifico.
-Deve ser entregue um arquivo separado TXT com nome do grupo ate 3 alunos e instruções de como rodar no GCC ou CODEBLOCKS em Linux ou Windows.
+Deve ser entregue um arquivo separado .txt com nome do grupo de até 3 alunos e instruções de como rodar no GCC ou CODEBLOCKS em Linux ou Windows.
 Todos os arquivos de entrada e saída devem estar na mesma pasta do arquivo executável.
 
 Fazer um compilador que deve ser chamado para executar da seguinte forma: ./compilador arquivo.asm
@@ -68,8 +68,8 @@ ROT:
 Add N1
 ```
 
-O compilador deve aceitar maiúsculas e minúsculas (case insensitive)e diretivas SPACE e CONST com argumentos.
-Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semântico ou léxico). Alista de erros é:
+O compilador deve aceitar maiúsculas e minúsculas (case insensitive) e diretivas SPACE e CONST com argumentos.
+Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semântico ou léxico). A lista de erros é:
 
 - Rotulo declarado duas vezes em lugares diferentes
 - Dois rótulos na mesma linha
@@ -78,31 +78,33 @@ Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semâ
 - Instrução inexistente
 - Erros léxicos (label não pode começar por número e o único caracter especial que pode ter é o “_”).
 
-A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação).
+A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação). NENHUM outro erro é tratado além dos especificados, logo erros na execução podem ocorrer se outros erros forem utilizados nos arquivos. No caso de detecção de um erro, ele é indicado no arquivo .pre, os arquivos .o1 e .o2 são deletados, e a execução daquela instrução específica é interrompida, ou seja, é mostrado apenas um erro por linha, porém as linhas restantes continuarão sendo verificadas.
 
-# Compilando e Rodando Testes
+# Compilando e Rodando
 
-Para compilar o projeto em um executável, rode
+Para compilar o projeto, rode
 
 ```bash
-g++ main.cpp Pre_Processador.cpp compilador.cpp Parser.cpp Tabelas.cpp -o compilador -std=c++17 -Wall
+g++ main.cpp Pre_Processador.cpp compilador.cpp Parser.cpp Tabelas.cpp -o compilador
 ```
+
+dentro da pasta `/src`.
 
 ## Configurando Make no Windows
 
-O projeto conta com um Makefile para facilitar a compilação.
+O projeto conta com um Makefile para facilitar a compilação opcionalmente.
 
 No Windows, para ter acesso ao comando `make`, primeiro instale o [scoop](scoop.sh) (siga as instruções do site).
 Depois, instale [o app make](https://scoop.sh/#/apps?q=make&id=c43ff861c0f1713336e5304d85334a29ffb86317) a partir do comando `scoop install main/make`.
 
 Com isso, o comando ficará disponível, então basta rodar `make` a partir da raiz do projeto para compilar os arquivos em um executável.
 
-## Executando Testes
+## Executando Arquivos
 
-Para executar os testes, rode
+Mova o .exe para onde desejar e, para executar o compilador, rode
 
 ```bash
-./compilador.exe tests/<nome_do_arquivo_de_teste>.asm
+./compilador.exe <caminho_do_arquivo>.asm
 ```
 
-Onde `<nome_do_arquivo_de_teste>` é o nome de um dos arquivos da pasta teste.
+na mesma pasta do .exe, onde `<caminho_do_arquivo>` é o `path` para o arquivo .asm e onde os arquivos .pre, .o1 e .o2 serão salvos.

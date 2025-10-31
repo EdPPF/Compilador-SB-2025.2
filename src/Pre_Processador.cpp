@@ -111,10 +111,7 @@ void extendMacros(string &line) {
  */
 void processLines() {
     string line; 
-    string previousLine;
 
-    // bool previousNeedsBody = false;
-    
     while (getline(arq, line)) {
         removeComment(line);
 
