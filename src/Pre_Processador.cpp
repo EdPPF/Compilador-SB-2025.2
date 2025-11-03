@@ -2,6 +2,7 @@
 #include "Parser.h"
 #include "Pre_Processador.h"
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -114,6 +115,7 @@ void processLines() {
 
     while (getline(arq, line)) {
         removeComment(line);
+        std::transform(line.begin(), line.end(), line.begin(), ::toupper);
 
         if (!line.empty()) {
             extendMacros(line);

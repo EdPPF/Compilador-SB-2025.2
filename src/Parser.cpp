@@ -30,6 +30,9 @@ LinhaProcessada parseLinha(const std::string& linha) {
 
     linhaLimpa = linhaLimpa.substr(colonPos + 1);
 
+    // Converte para maiúsculas
+    std::transform(linhaLimpa.begin(), linhaLimpa.end(), linhaLimpa.begin(), ::toupper);
+
     // Não foram especificados errors tratando dos delimitadores.
     // Portanto, assumiremos que eles são utilizados corretamente.
     replace(linhaLimpa.begin(), linhaLimpa.end(), '+', ' ');
