@@ -93,14 +93,14 @@ int main(int argc, char* argv[]) {
     executarPreProcessamento();
     
     // Fecha os arquivos em todos os casos
-    int statusCompilacao = executarCompilacao();
+    executarCompilacao();
     arq.close();
     pre.close();
     o1.close();
     o2.close();
 
-    if(statusCompilacao != 0 || houveErroDeCompilacao) {
-        std::cout << "\n+-+- Compilacao finalizada com erros -+-+\n" << std::endl;
+    if(houveErroDeCompilacao) {
+        std::cout << "\n\n+-+- Compilacao finalizada com erros -+-+\n" << std::endl;
         filesystem::remove(nomeArquivoO1);
         filesystem::remove(nomeArquivoO2);
     } else {

@@ -33,8 +33,8 @@ void findMacro(LinhaProcessada &parsedLine, string &line) {
         if (parsedLine.instrucao == "MACRO") {
             Macro macro = {parsedLine.operandos, vector<string>()};
 
-            macroTable.table[parsedLine.rotulo] = macro;
-            macroTable.currentMacro = parsedLine.rotulo;
+            macroTable.table[parsedLine.rotulo[0]] = macro;
+            macroTable.currentMacro = parsedLine.rotulo[0];
         } else {
             memFile.push_back(line);
         }
@@ -86,7 +86,7 @@ void replaceArgs(LinhaProcessada &parsedLine) {
         }
 
         if (!parsedLine.rotulo.empty() && count == 0) {
-            macroLine = parsedLine.rotulo + ": " + macroLine;
+            macroLine = parsedLine.rotulo[0] + ": " + macroLine;
         }
 
         memFile.push_back(macroLine);

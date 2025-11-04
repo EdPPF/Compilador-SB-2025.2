@@ -8,7 +8,7 @@
  * Estrutura para armazenar os componentes de uma linha de código ASM após ser processado pelo parser.
  */
 struct LinhaProcessada {
-    std::string rotulo;
+    std::vector<std::string> rotulo;
     std::string instrucao;
     std::vector<std::string> operandos;
 };

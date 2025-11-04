@@ -9,26 +9,28 @@ LinhaProcessada parseLinha(const std::string& linha) {
     LinhaProcessada resultado; // Inicializa a struct
     std::string linhaLimpa = linha; // Cópia da linha
 
-    size_t i = 0;
-
-    while (i < linhaLimpa.size() && isspace(linhaLimpa[i])) {
-        i++;
-    }
-
-    linhaLimpa = linhaLimpa.substr(i);
-
     // Rótulo é tudo que vem antes de ':', stringstream 'elimina'
     // espaços no rótulo (charactere inválido)
+    resultado.rotulo = std::vector<std::string>();
     size_t colonPos = linhaLimpa.find(':');
-    if (colonPos != std::string::npos) {
-        resultado.rotulo = linhaLimpa.substr(0, colonPos);
-    }
+    while (colonPos != std::string::npos) {
+        size_t i = 0;
 
-    if (colonPos + 1 > linhaLimpa.size()) {
-        return resultado;
-    }
+        while (i < linhaLimpa.size() && isspace(linhaLimpa[i])) {
+            i++;
+        }
 
-    linhaLimpa = linhaLimpa.substr(colonPos + 1);
+        linhaLimpa = linhaLimpa.substr(i);
+
+        resultado.rotulo.push_back(linhaLimpa.substr(0, colonPos - i));
+
+        if (colonPos + 1 > linhaLimpa.size()) {
+            return resultado;
+        }
+
+        linhaLimpa = linhaLimpa.substr(colonPos + 1);
+        colonPos = linhaLimpa.find(':');
+    }
 
     // Converte para maiúsculas
     std::transform(linhaLimpa.begin(), linhaLimpa.end(), linhaLimpa.begin(), ::toupper);

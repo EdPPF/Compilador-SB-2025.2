@@ -3,43 +3,80 @@
 #include "Tabelas.h"
 #include <algorithm>
 #include <filesystem>
+#include <iostream>
 
 using namespace std;
 
+int lineCount = 0;
 int addrCount = 0;
+bool currentError = false;
 map<string, InfoSimbolo> symbolTable;
-vector<pair<int, int>> memObj;
+map<int, vector<string>> errorList;
+
+/** 
+ * Índices: 0 - Valor/Pendências (.o2) | 1 - Indicador de Label (.o1) | 2 - Offset | 3 - Linha do .pre
+ * 
+ * Veja que, apesar de ser um vetor de inteiros, o ÚNICO índice que trata das pendências
+ * é o '0' para que a solicitação de lista de pendência em código seja satisfeita. Os outros
+ * índices são apenas para facilitar outros processos e podiam muito bem serem armazenados
+ * em uma outra estrutura. 
+ * 
+ * Para que não hajam dúvidas: '1' tem o mesmo valor que '0' mas que não é alterado de acordo 
+ *                                 com pendências. Usado no arquivo .o1.
+ *                             '2' é o offset para instruções INPUT/LOAD que, originalmente, 
+ *                                 seria armazenado no próprio arquivo .o2 para depois ser 
+ *                                 somado.
+ *                             '3' armazena a linha do arquivo .pre que o endereço indica. É
+ *                                 usado para mostrar as linhas dos erros.
+ */
+vector<vector<int>> memObj;  
+
+/**
+ * @brief Reporta um erro de compilação, grava a mensagem no arquivo .pre e sinaliza que um erro ocorreu.
+ */
+void callError(LinhaProcessada &cmd, int errorID, string label=string()) {
+    houveErroDeCompilacao = true; // Seta a flag de erro
+    currentError = true;
+
+    if (errorList.find(lineCount) == errorList.end()) {
+        errorList[lineCount] = vector<string>();
+    }
+
+    if (errorID == 0) {
+        errorList[lineCount].push_back("Erro Sintatico na linha (" + to_string(lineCount + 1) + "): Dois rotulos na mesma linha.");
+    } else if (errorID == 1) {
+        errorList[lineCount].push_back("Erro Lexico na linha (" + to_string(lineCount + 1) + "): Rotulo '" + label + "' com caracteres invalidos.");          
+    } else if (errorID == 2) {
+        errorList[lineCount].push_back("Erro Semantico na linha (" + to_string(lineCount + 1) + "): Rotulo '" + label + "' declarado duas vezes em lugares diferentes.");
+    } else if (errorID == 3) {
+        errorList[lineCount].push_back("Erro Sintatico na linha (" + to_string(lineCount + 1) + "): Instrucao '" + cmd.instrucao + "' inexistente."); 
+    } else if (errorID == 4) {
+        errorList[lineCount].push_back("Erro Sintatico na linha (" + to_string(lineCount + 1) + "): Instrucao '" + cmd.instrucao + "' com numero de parametros errado.");    
+    }
+}
 
 /**
  * @brief Escreve o código objeto não resolvido (com pendências) no arquivo .o1 e armazena no vetor memObj.
  */
-void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
-    if (addrCount > 0) {
-        o1 << " ";
-    }
-
+void decodeInstruction(LinhaProcessada &cmd, InfoInstrucao &info) {
     // Diretivas
     if (cmd.instrucao == "CONST") {
-        o1 << cmd.operandos[0];
-        memObj.push_back(make_pair(stoi(cmd.operandos[0]), 0));
+        memObj.push_back({stoi(cmd.operandos[0]), stoi(cmd.operandos[0]), 0, lineCount});
         addrCount++;
+
         return;
     }
     if (cmd.instrucao == "SPACE") {
         if (cmd.operandos.empty()) {
-            o1 << 0;
-            memObj.push_back(make_pair(0, 0));
-
+            memObj.push_back({0, 0, 0, lineCount});
             addrCount++;
+
             return;
         } else {
-            o1 << 0;
-            memObj.push_back(make_pair(0, 0));
-
             int count = stoi(cmd.operandos[0]);
-            for (int i = 0; i < count - 1; i++) {
-                o1 << " " << 0;
-                memObj.push_back(make_pair(0, 0));
+
+            for (int i = 0; i < count; i++) {
+                memObj.push_back({0, 0, 0, lineCount});
             }
 
             addrCount += count;
@@ -48,21 +85,17 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
     }
 
     // Instruções
-    o1 << info.opcode;
-    memObj.push_back(make_pair(info.opcode, 0));
-
+    memObj.push_back({info.opcode, info.opcode, 0, lineCount});
     addrCount++;
 
     if (cmd.instrucao == "COPY" || cmd.operandos.size() == 1) {
-        for (size_t i = 0; i < cmd.operandos.size(); i++){ 
-            string op = cmd.operandos[i];
+        for (string &op : cmd.operandos){ 
 
             if (symbolTable.find(op) == symbolTable.end()) {
                 symbolTable[op] = {-1, false};
             }
 
-            memObj.push_back(make_pair(symbolTable[op].endereco, 0));
-            o1 << " " << symbolTable[op].endereco;
+            memObj.push_back({symbolTable[op].endereco, symbolTable[op].endereco, 0, lineCount});
 
             if (!symbolTable[op].definido) {
                 symbolTable[op] = {addrCount, false};  
@@ -79,12 +112,10 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
         }
 
         if (!symbolTable[op1].definido) {
-            memObj.push_back(make_pair(symbolTable[op1].endereco, stoi(op2)));
-            o1 << " " << symbolTable[op1].endereco;
+            memObj.push_back({symbolTable[op1].endereco, symbolTable[op1].endereco, stoi(op2), lineCount});
             symbolTable[op1] = {addrCount, false};  
         } else {
-            memObj.push_back(make_pair(symbolTable[op1].endereco + stoi(op2), 0));
-            o1 << " " << symbolTable[op1].endereco + stoi(op2);
+            memObj.push_back({symbolTable[op1].endereco + stoi(op2), symbolTable[op1].endereco + stoi(op2), 0, lineCount});
         }
 
         addrCount++;
@@ -92,121 +123,112 @@ void writeObject(LinhaProcessada &cmd, InfoInstrucao &info) {
 }
 
 /**
- * @brief Reporta um erro de compilação, grava a mensagem no arquivo .pre e sinaliza que um erro ocorreu.
+ * @brief Valida uma instrução, seus operandos, e chama writeO1 para gerar o código.
  */
-void callError(LinhaProcessada &cmd, int &lineCount, int errorID) {
-    houveErroDeCompilacao = true; // Seta a flag de erro
-
-    if (errorID == 0) {
-        pre << "\t" << "Erro Semântico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' declarado duas vezes em lugares diferentes.\n";    
-    } else if (errorID == 1) {
-        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Dois rótulos na mesma linha.\n";    
-    } else if (errorID == 2) {
-        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' com número de parâmetros errado.\n";    
-    } else if (errorID == 3) {
-        pre << "\t" << "Erro Sintático na linha (" + to_string(lineCount + 1) + "): Instrução '" << cmd.instrucao << "' inexistente.\n";    
-    } else if (errorID == 4) {
-        pre << "\t" << "Erro Léxico na linha (" + to_string(lineCount + 1) + "): Rótulo '" << cmd.rotulo << "' com caracteres inválidos.\n";    
-    }
-}
-
-/**
- * @brief Valida uma instrução, seus operandos, e chama writeObject para gerar o código.
- */
-int decodeInstruction(LinhaProcessada &cmd, string &line, int &lineCount) {
-    if (cmd.instrucao.find(':') != string::npos) {
-        callError(cmd, lineCount, 1);
-        return 1; // Sinaliza erro, compile vai continuar para a próxima linha
-    }
-    for (string op : cmd.operandos) {
-        if (op.find(':') != string::npos) {
-            callError(cmd, lineCount, 1);
-            return 1;
-        }
-    }
+void checkInstruction(LinhaProcessada &cmd, string &line) {
+    InfoInstrucao info;
 
     if (tabelaInstrucoes.find(cmd.instrucao) == tabelaInstrucoes.end()) {
-        callError(cmd, lineCount, 3);
-        return 1;
-    }
+        callError(cmd, 3);
+    } else {
+        info = tabelaInstrucoes[cmd.instrucao];
 
-    InfoInstrucao info = tabelaInstrucoes[cmd.instrucao];
-    if (find(info.operandos.begin(), info.operandos.end(), cmd.operandos.size()) == info.operandos.end()) {
-        callError(cmd, lineCount, 2);
-        return 1;
+        if (find(info.operandos.begin(), info.operandos.end(), cmd.operandos.size()) == info.operandos.end()) {
+            callError(cmd, 4);
+        } else if (!currentError || !houveErroDeCompilacao){
+            decodeInstruction(cmd, info);
+        }
     }
-
-    writeObject(cmd, info);
-    return 0;
 }
 
 /**
  * @brief Verifica erros semânticos (rótulos pendentes) e escreve o código objeto final resolvido no arquivo .o2.
  */
-int writeO2() {
+void writeObject() {
     for (const auto& entry : symbolTable) {
         if (!entry.second.definido) {
-            pre << endl << "Erro Semântico: Rótulo '" << entry.first << "' não declarado.";
+
+            for (int i = entry.second.endereco; i > 0; i = memObj[i][0]) {
+                int x = memObj[i][3];
+
+                if (errorList.find(x) == errorList.end()) {
+                    errorList[x] = vector<string>();
+                }
+
+                errorList[x].push_back("Erro Semantico na linha (" + to_string(x + 1) + "): Rotulo '" + entry.first + "' nao declarado.");
+            }
             houveErroDeCompilacao = true; // Seta a flag de erro
         }
     }
 
-    if (houveErroDeCompilacao) {
-        return 1; // Indica que houve erro na compilação
-    }
-
     // Escreve o arquivo .o2
-    for (size_t i = 0; i < memObj.size(); i++) {
-        int bin = memObj[i].first;
-        if (i > 0) {
-            o2 << " ";
+    if (!houveErroDeCompilacao) {
+        for (size_t i = 0; i < memObj.size(); i++) {
+            if (i > 0) {
+                o1 << " ";
+                o2 << " ";
+            }
+            o1 << memObj[i][1];
+            o2 << memObj[i][0];
         }
-        o2 << bin;
+    } else {
+        for(const auto& entry : errorList) {
+            for (const auto& error : entry.second) {
+                cout << endl << error;
+            }
+        }
     }
-
-    return 0;
 }
 
 /**
  * @brief Executa o algoritmo de compilação de passagem única, populando a Tabela de Símbolos e resolvendo pendências.
  */
-int compile() {
-    int lineCount = 0;
-
+void compile() {
     for (lineCount; lineCount < memFile.size(); lineCount++) {
         string line = memFile[lineCount];
         LinhaProcessada cmd = parseLinha(line);
 
+        currentError = false;
+
         pre << line << endl;
-        
-        if (!cmd.rotulo.empty()) {
-            if (isdigit(cmd.rotulo[0]) || any_of(cmd.rotulo.begin(), cmd.rotulo.end(), [](auto x) {return !isalnum(x) && x != '_';})) {
-                callError(cmd, lineCount, 4);
-                continue;
-            }
 
-            if (symbolTable.find(cmd.rotulo) != symbolTable.end()) {
-                if (symbolTable[cmd.rotulo].definido) {
-                    callError(cmd, lineCount, 0);
-                    continue;
-                } else {
-                    int tmp;
-                    for (int i = symbolTable[cmd.rotulo].endereco; i > 0; i = tmp) {
-                        tmp = memObj[i].first;
-                        memObj[i].first = addrCount + memObj[i].second;
-                    }
-                }
-            } 
-
-            symbolTable[cmd.rotulo] = {addrCount, true};
+        if (cmd.rotulo.size() > 1) {
+            callError(cmd, 0);
         }
 
-        if (cmd.instrucao.empty()) {
-            pre << line << endl;
-        } else if (decodeInstruction(cmd, line, lineCount)) {
-            continue;
+        if (!cmd.rotulo.empty()) {
+            for (auto &rotulo : cmd.rotulo) {
+                bool labelError = false;
+
+                if (isdigit(rotulo[0]) || any_of(rotulo.begin(), rotulo.end(), [](auto x) {return !isalnum(x) && x != '_';})) {
+                    callError(cmd, 1, rotulo);
+                    labelError = true;
+                }
+
+                if (symbolTable.find(rotulo) != symbolTable.end()) {
+                    if (symbolTable[rotulo].definido) {
+                        callError(cmd, 2, rotulo);
+                        labelError = true;
+                    } else {
+                        int tmp;
+
+                        for (int i = symbolTable[rotulo].endereco; i > 0; i = tmp) {
+                            tmp = memObj[i][0];
+                            memObj[i][0] = addrCount + memObj[i][2];
+                        }
+                    }
+                } 
+
+                if (!labelError) {
+                    symbolTable[rotulo] = {addrCount, true};
+                }
+            }
+        }
+
+        if (!cmd.instrucao.empty()) {
+            checkInstruction(cmd, line);
         }
     }
 
-    return writeO2();
+    writeObject();
 }

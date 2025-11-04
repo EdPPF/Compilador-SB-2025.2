@@ -1,5 +1,5 @@
 ; Teste de vários erros
-; O compilador deve reportar TODOS os erros abaixo no .pre e não parar no primeiro.
+; O compilador deve reportar TODOS os erros abaixo no terminal e não parar no primeiro.
 
 VALOR:      CONST   10
 

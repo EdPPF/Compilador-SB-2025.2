@@ -78,7 +78,7 @@ Deve indicar erros, marcando a linha no arquivo .pre e o tipo (sintático, semâ
 - Instrução inexistente
 - Erros léxicos (label não pode começar por número e o único caracter especial que pode ter é o “_”).
 
-A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação). NENHUM outro erro é tratado além dos especificados, logo erros na execução podem ocorrer se outros erros forem utilizados nos arquivos. No caso de detecção de um erro, ele é indicado no arquivo .pre, os arquivos .o1 e .o2 são deletados, e a execução daquela instrução específica é interrompida, ou seja, é mostrado apenas um erro por linha, porém as linhas restantes continuarão sendo verificadas.
+A sintaxe deve ser igual ao assembly inventado (por exemplo, usando MULT para multiplicação). NENHUM outro erro é tratado além dos especificados, logo erros na execução podem ocorrer se outros erros forem encontrados nos arquivos. No caso de detecção de um erro, ele é indicado na saída do terminal, os arquivos .o1 e .o2 são deletados, e a decodificação daquela instrução é interrompida, mas ela continua sendo analisada. Como dito, nenhum erro de pré-processamento é tratada, e o uso correto dos delimitadores ',' e '+' e dos inteiros para as instruções de INPUT/LOAD são inferidos.
 
 # Compilando e Rodando
 
